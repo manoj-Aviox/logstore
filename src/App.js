@@ -1,3 +1,4 @@
+import React from "react";
 import "./App.css";
 import Index from "./routes";
 import 'bootstrap/dist/css/bootstrap.min.css';
