@@ -1,42 +1,59 @@
-import React, { useEffect } from "react";
-import Table from 'react-bootstrap/Table';
+  import React, { useEffect, useState } from "react";
+  import Table from 'react-bootstrap/Table';
+import HeaderNav from "../components/Header";
+import Sidebar from "../components/SideNav";
 
-const Home = () => {
-  return (
-    <div>
-      <div class="bg-gray-100">
-      <Table striped bordered hover>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Username</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>1</td>
-          <td>Mark</td>
-          <td>Otto</td>
-          <td>@mdo</td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>Jacob</td>
-          <td>Thornton</td>
-          <td>@fat</td>
-        </tr>
-        <tr>
-          <td>3</td>
-          <td colSpan={2}>Larry the Bird</td>
-          <td>@twitter</td>
-        </tr>
-      </tbody>
-    </Table>
-      </div>
-    </div>
-  );
+import Slider from 'react-rangeslider'
+
+// To include the default styles
+import 'react-rangeslider/lib/index.css'
+// Not using an ES6 transpiler
+// var Slider = require('react-rangeslider')
+
+  const[value,setValue] = useState();
+
+
+  const handleChangeStart = () => {
+  console.log('Change event started')
 };
 
-export default Home;
+const handleChange = value => {
+  this.setState({
+    value: value
+  })
+};
+
+const handleChangeComplete = () => {
+  console.log('Change event completed')
+};
+
+  const Home = () => {
+    
+    return (
+      <div>
+    <HeaderNav/>
+    <Sidebar/>
+    {/* <!--Container Main start--> */}
+    <div className="height-100 bg-light inner-banner">
+        <h4 className="">Filter</h4>
+        <div className="">
+          <form>
+          <div className='slider'>
+            <Slider
+              min={0}
+              max={100}
+              value={value}
+              onChangeStart={handleChangeStart}
+              onChange={handleChange}
+              onChangeComplete={handleChangeComplete}
+            />
+            <div className='value'>{value}</div>
+          </div>
+          </form>
+        </div>
+    </div>
+  </div>
+    );
+  };
+
+  export default Home;
