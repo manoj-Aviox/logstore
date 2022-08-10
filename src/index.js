@@ -4,10 +4,19 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Keylcoak
+import keycloak from './keycloak';
+import { ReactKeycloakProvider } from "@react-keycloak/web";
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <ReactKeycloakProvider initOptions={{
+      onLoad: "",
+    }} authClient={keycloak}>
+
+      <App />
+    </ReactKeycloakProvider>
   </React.StrictMode>
 );
 
