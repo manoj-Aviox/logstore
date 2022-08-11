@@ -1,8 +1,0 @@
-{
-  "realm": "RealDemo",
-  "auth-server-url": "https://iam.sandboxing.tech/",
-  "ssl-required": "external",
-  "resource": "demo-client",
-  "public-client": true,
-  "confidential-port": 0
-}

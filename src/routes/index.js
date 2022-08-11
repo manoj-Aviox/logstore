@@ -7,12 +7,12 @@ import PublicRoute from "./PublicRoute"
 
 const Index = () => {
   
+  
   return (
     <div>
       <Router>
         <Routes>
           <Route exact path="/" name="home" element={<PrivateRoute><Home /></PrivateRoute>} />
-          {/* <Route exact path="/" name="home" element={<Home />} /> */}
           <Route exact path="/signup" name="signup" element={<PublicRoute><Signup /></PublicRoute>} />
         </Routes>
       </Router>
