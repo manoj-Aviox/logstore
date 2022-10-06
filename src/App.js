@@ -10,10 +10,13 @@ function App() {
   const refreshToken = localStorage.getItem("refreshToken");
 
   const setTokens = (token, idToken, refreshToken) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("refreshToken", refreshToken);
-    localStorage.setItem("idToken", idToken);
+    if (token !== "") {
+      localStorage.setItem("token", token);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("idToken", idToken);
+    }
   };
+
   return (
     <>
       <header className="App-header">
@@ -26,7 +29,11 @@ function App() {
               keycloakTokens.refreshToken ? keycloakTokens.refreshToken : ""
             )
           }
-          initOptions={{ onLoad: "", token, refreshToken }}
+          initOptions={{
+            onLoad: "",
+            token,
+            refreshToken,
+          }}
         >
           <Index />
         </ReactKeycloakProvider>

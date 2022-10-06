@@ -2,140 +2,179 @@ import React, { useEffect, useState } from "react";
 import Table from "react-bootstrap/Table";
 import axios from "axios";
 import moment from "moment";
-import Select from "react-select";
-// import Button from "react-bootstrap/Button";
-import { Modal, Button, Alert } from "react-bootstrap";
+import { Modal, Button } from "react-bootstrap";
 import HeaderNav from "../components/Header";
+import { FaPlus, FaTrashAlt } from "react-icons/fa";
+import dataNotFound from "../Images/data-not-found.jpg";
+import Select from "react-select";
+
+// Baseurl
+const Baseurl = process.env.REACT_APP_BASE_URL;
+
+// Days Limit
+const Days = parseInt(process.env.REACT_APP_DAYS_LIMIT);
+
 const Home = () => {
-  const [error, setError] = useState(true);
-  const [fromDate, setFromDate] = useState(moment());
-  const [toDate, setToDate] = useState(moment());
-  console.log(error);
-  // const [search, setSearch] = useState();
+  // Date-Picker's state
+  const [fromDate, setFromDate] = useState(moment().format("YYYY-MM-DDT00:00"));
+  const [toDate, setToDate] = useState(moment().format("YYYY-MM-DDT23:59"));
+
+  // Select Server
   const [selected, setSelected] = useState();
+
+  // Limit
   const [limit, setLimit] = useState("10");
+
   // Modal
-  const [show, setShow] = useState(false);
-  const [showKey, setShowKey] = useState();
-  // Table colums
+  const [showModal, setShowModal] = useState(false);
+  const [keyData, setKeyData] = useState();
+
+  // show rows and elapsed time
+  const [showRowsElapsed, setShowRowsElapsed] = useState();
+
+  // Table
   const [columns, setColumns] = useState([]);
-  // Table Rows
+  const [duplicate, setDuplicate] = useState([]);
   const [logs, setLogs] = useState([]);
+
+  // Submit Button
+  const [withSearch, setWithSearch] = useState(false);
+  const [advance, setAdvance] = useState(false);
+
   // Dropdown
   const [drop, setDrop] = useState([]);
-  const [queryOptions, setQueryOptions] = useState([]);
-  const [selectorOption, setSelectorOption] = useState([]);
-  const [selectedSelectorOption, setSelectedSelectorOption] = useState([]);
+  const [queryOptions, setQueryOptions] = useState([
+    {
+      name: "",
+      option: "AND",
+      conjunction: "=",
+      inputVal: "",
+    },
+  ]);
 
-  const geLog = async () => {
-    try {
-      let url = `http://logstore.sandboxing.tech/?database=azercell&query=SELECT * FROM azercell.${selected} WHERE (TIMESTAMP >= toDateTime('${moment(
-        fromDate
-      ).format(
-        "YYYY-MM-DD HH:mm:ss"
-      )}')) AND (TIMESTAMP <= toDateTime('${moment(toDate).format(
-        "YYYY-MM-DD HH:mm:ss"
-      )}')) LIMIT ${limit} FORMAT JSON`;
-      const res = await axios.get(url);
-      console.log(res.data.data.length, "url");
-      setColumns(res.data.meta.slice(2));
-      setLogs(res.data.data);
-    } catch (error) {
-      console.log(error);
-    }
+  // Server  Dropdown's Option
+
+  const serverOptions = drop.map((item, index) => {
+    return { label: item.name, value: item.name };
+  });
+
+  const handleServerChange = (event) => {
+    setSelected(event);
   };
 
-  const geLogWithSearch = async () => {
-    const data = queryOptions.map((item) => {
-      return `${item.option} ${item.name}${item.conjunction}'${item.inputVal}'`;
-    });
-    console.log(data);
-    try {
-      let url = `http://logstore.sandboxing.tech/?database=azercell&query=SELECT * FROM azercell.${selected} WHERE (TIMESTAMP >= toDateTime('${moment(
-        fromDate
-      ).format(
-        "YYYY-MM-DD HH:mm:ss"
-      )}')) AND (TIMESTAMP <= toDateTime('${moment(toDate).format(
-        "YYYY-MM-DD HH:mm:ss"
-      )}')) ${data.map((item) => item).join(" ")} LIMIT ${limit} FORMAT JSON`;
-      console.log(url);
-      const res = await axios.get(url);
-      console.log(res.data.data.length, "url");
-      setColumns(res.data.meta.slice(2));
-      setLogs(res.data.data);
-    } catch (error) {
-      console.log(error);
-    }
+  // Additional
+  const header = {
+    headers: {
+      origin: "iam.sandboxing.tech",
+    },
   };
+  const cors = "add_http_cors_header=1";
+
+  useEffect(() => {
+    getColumns();
+  }, []);
+  useEffect(() => {
+    if (selected) {
+      getLog(false);
+    }
+  }, [selected]);
 
   // GEt Data for dropdown
   const getColumns = async () => {
     try {
-      let url =
-        "http://logstore.sandboxing.tech/?database=azercell&query=show%20tables%20like%20%27srv_%25%27%20FORMAT%20JSON";
-      const res = await axios.get(url);
-      setDrop(res.data.data);
-    } catch (error) {
-      console.log(error);
+      let url = `${Baseurl}?database=azercell&${cors}&query=show%20tables%20like%20%27srv_%25%27%20FORMAT%20JSON`;
+      const res = await axios.get(url, header);
+      res.data && setDrop(res.data.data);
+    } catch (error) {}
+  };
+
+  // GetLog Function
+  const getLog = async (check) => {
+    if (difference >= Days) {
+      alert(`Don't fetch data more than ${Days} Days`);
+    } else {
+    try {
+      let url = `${Baseurl}?database=azercell&${cors}&query=SELECT * FROM azercell.${selected.value}  LIMIT ${limit} FORMAT JSON`;
+
+      let url2 = `${Baseurl}?database=azercell&${cors}&query=SELECT * FROM azercell.${
+        selected.value
+      } WHERE (TIMESTAMP >= toDateTime('${moment(fromDate).format(
+        "YYYY-MM-DD HH:mm:ss"
+      )}')) AND (TIMESTAMP <= toDateTime('${moment(toDate).format(
+        "YYYY-MM-DD HH:mm:ss"
+      )}')) LIMIT ${limit} FORMAT JSON`;
+
+      let mainUrl = check !== false ? url2 : url;
+      const res = await axios.get(mainUrl, header);
+      setShowRowsElapsed(res.data);
+      setColumns(res.data.meta.slice(2));
+      check === false ? setLogs([]) : setLogs(res.data.data);
+    } catch (error) {}
     }
   };
 
-  useEffect(() => {
-    let a = columns.map((data) => {
-      return { value: data.name, label: data.name };
+  // GetLog WithSearch Function
+  const getLogWithSearch = async () => {
+    const data = queryOptions.map((item) => {
+      return `${item.option} ${item.name}${item.conjunction}'${item.inputVal}'`;
     });
-    setSelectorOption(a);
-  }, [columns]);
-  useEffect(() => {
-    getColumns();
-  }, []);
 
-  const createQuery = (val, actions) => {
-    let queryClone = [...queryOptions];
-    if (actions.action === "select-option") {
-      val.map((data) => {
-        let index = queryClone.findIndex((item) => item.name === data.value);
-        if (index === -1) {
-          queryClone.push({
-            name: data.label,
-            option: "AND",
-            conjunction: "=",
-            inputVal: "",
-          });
-        }
-        setQueryOptions(queryClone);
-      });
-    } else if (actions.action === "remove-value") {
-      let filteredQuery = queryClone.filter(
-        (data) => data.name !== actions.removedValue.value
-      );
-      setQueryOptions(filteredQuery);
-    } else if (actions.action === "clear") {
-      setQueryOptions([]);
-    }
-    setSelectedSelectorOption(val);
+    try {
+      let url = `${Baseurl}?database=azercell&${cors}&query=SELECT * FROM azercell.${
+        selected.value
+      } WHERE (TIMESTAMP >= toDateTime('${moment(fromDate).format(
+        "YYYY-MM-DD HH:mm:ss"
+      )}')) AND (TIMESTAMP <= toDateTime('${moment(toDate).format(
+        "YYYY-MM-DD HH:mm:ss"
+      )}')) ${data.map((item) => item).join(" ")} LIMIT ${limit} FORMAT JSON`;
+
+      const res = await axios.get(url, header);
+      setShowRowsElapsed(res.data);
+      res.data && setColumns(res.data.meta.slice(2));
+      res.data && setLogs(res.data.data);
+    } catch (error) {}
   };
 
+  // Make Query Section
+  const addTableRows = (index) => {
+    const arr = [...queryOptions];
+    const rowsInput = {
+      name: "",
+      option: "AND",
+      conjunction: "=",
+      inputVal: "",
+    };
+    arr.splice(index + 1, 0, rowsInput);
+    setQueryOptions(arr);
+  };
+  const deleteTableRows = (index) => {
+    const rows = [...queryOptions];
+    rows.splice(index, 1);
+    setQueryOptions(rows);
+    setDuplicate(rows.map((data) => data.name));
+  };
   const setQueryParams = (val, index, name) => {
     let filteredQuery = [...queryOptions];
     filteredQuery[index] = { ...filteredQuery[index], [name]: val };
     setQueryOptions(filteredQuery);
+    if (name === "name") {
+      setDuplicate(filteredQuery.map((data) => data.name));
+    }
   };
 
   // Modal
-  const handleClose = () => setShow(false);
-  const handleShow = (key) => {
-    setShow(true);
-    setShowKey(key);
+  const handleCloseModal = () => setShowModal(false);
+  const handleShowModal = (key) => {
+    setShowModal(true);
+    setKeyData(key);
   };
   const keyDownload = (content, fileName, contentType) => {
-    const a = document.createElement("a");
+    const anchorElement = document.createElement("a");
     const file = new Blob([JSON.parse(content)], { type: contentType });
-    a.href = URL.createObjectURL(file);
-    a.download = fileName;
-    a.click();
+    anchorElement.href = URL.createObjectURL(file);
+    anchorElement.download = fileName;
+    anchorElement.click();
   };
-
   const downloadDataInCsv = () => {
     var data = [];
     var rows = document.querySelectorAll("table.down tr");
@@ -143,240 +182,293 @@ const Home = () => {
     for (var i = 0; i < rows.length; i++) {
       var row = [],
         cols = rows[i].querySelectorAll("td, th");
-
       for (var j = 0; j < cols.length; j++) {
+        if (cols[j].innerText === "View Key") {
+          logs.map((val, index) => {
+            row.push(val.KEYS);
+          });
+        }
         row.push(cols[j].innerText);
       }
 
       data.push(row.join(","));
     }
 
-    const a = document.createElement("a");
+    const anchorElement = document.createElement("a");
     const file = new Blob([data.join("\n")], { type: "text/csv" });
-    a.href = URL.createObjectURL(file);
-    a.download = "Data.csv";
-    a.click();
+    anchorElement.href = URL.createObjectURL(file);
+    anchorElement.download = "Data.csv";
+    anchorElement.click();
   };
 
+  // Disable submit button
   useEffect(() => {
-    setError(moment(toDate).isAfter(fromDate));
-  }, [toDate]);
+    const data = queryOptions.every((item) => {
+      return item.name !== "" && item.inputVal !== "";
+    });
+    setWithSearch(data);
+  }, [queryOptions]);
+
+  // To iterate dynamic tablebody data
+  function isJson(str) {
+    try {
+      var parsed = JSON.parse(str);
+      if (Number.isInteger(parsed)) {
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  // Difference two dates
+  const difference = moment(toDate).diff(moment(fromDate), "days");
+  console.log(difference);
+
   return (
     <div>
       <HeaderNav />
       <div
         style={{ borderRadius: "6px", boxShadow: " 0 0 2px #94949499" }}
-        className="inner-banner bg-light mx-4 "
+        className="inner-banner bg-light mx-4 mb-3"
       >
-        <div className="d-flex flex-wrap justify-content-between mb-4">
-          {/* Dropdown */}
-          <div class="col-sm-3 mb-3">
-            <label for="select_srv" class="form-label">
-              Select
-            </label>
-            <select
-              id="select_srv"
-              class="form-select"
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              <option value="">Select</option>
-              {drop.map((d, i) => {
-                return (
-                  <option key={i} value={d.name}>
-                    {d.name}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          {/* Form */}
-          <div className="col-sm-3 mb-3">
-            <label for="from_date" class="form-label">
-              From
-            </label>
-            <input
-              id="from_date"
-              type="date"
-              className="form-control"
-              value={moment(fromDate).format("YYYY-MM-DD")}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                console.log(e.target.value);
-              }}
-            />
-          </div>
-          {/* TO */}
-          <div className="col-sm-3  mb-3">
-            <label for="to_date" class="form-label">
-              To
-            </label>
-            <input
-              type="date"
-              id="to_date"
-              className="form-control"
-              value={moment(toDate).format("YYYY-MM-DD")}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                // console.log(e.target.value);
-              }}
-            />
-            {moment(toDate).isAfter(fromDate) ? "" : ""}
-          </div>
-          {queryOptions.length === 0 ? (
-            <Button
-              variant="danger"
-              className="form-input-group col-sm-2 mb-3 align-self-end"
-              disabled={selected ? false : true}
-              onClick={geLog}
-            >
-              Submit
-            </Button>
-          ) : (
-            ""
-          )}
+        {/* Dropdown */}
+        <div className="col-sm-3 mb-3">
+          <label htmlFor="select_srv" className="form-label">
+            Services
+          </label>
 
-          {/* SearchBar */}
-          {/* <div className="">
-            <span>Search</span>
-            <input type="number" value={search} onChange={(e) => { setSearch(e.target.value); console.log(e.target.value) }} placeholder="enter MSI" />
-          </div> */}
+          <Select options={serverOptions} onChange={handleServerChange} />
         </div>
 
         {/* Query Section */}
-        <div>
-          {columns.length === 0 ? (
-            ""
-          ) : (
-            <div
-              style={{
-                backgroundColor: "white",
-                border: "1px solid lightgray",
-                borderRadius: "10px",
-                padding: "10px 15px",
-                boxShadow: " 0 0 1px #94949499",
-              }}
-            >
-              <label class="form-label">Select Query</label>
-              <Select
-                className="mb-3 col-sm-3"
-                isMulti
-                options={selectorOption}
-                value={selectedSelectorOption}
-                onChange={createQuery}
-              />
-              {queryOptions.length > 0 && (
-                <>
-                  <Table bordered responsive>
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Option</th>
-                        <th>Conjunction</th>
-                        <th>Input</th>
+        {columns.length > 0 && (
+          <div
+            style={{
+              backgroundColor: "white",
+              border: "1px solid lightgray",
+              borderRadius: "10px",
+              padding: "10px 15px",
+              boxShadow: " 0 0 1px #94949499",
+            }}
+          >
+            <div className="d-flex flex-wrap  mb-4">
+              {/* From */}
+              <div className="col-sm-3 mb-2 me-5">
+                <label htmlFor="from_date" className="form-label">
+                  From
+                </label>
+                <input
+                  id="from_date"
+                  type="datetime-local"
+                  className="form-control"
+                  value={moment(fromDate).format("YYYY-MM-DDTHH:mm")}
+                  onChange={(item) => {
+                    moment(item.target.value).isBefore(toDate) &&
+                      setFromDate(item.target.value);
+                  }}
+                />
+              </div>
+              {/* TO */}
+              <div className="col-sm-3 me-5 mb-2">
+                <label htmlFor="to_date" className="form-label">
+                  To
+                </label>
+                <input
+                  type="datetime-local"
+                  id="to_date"
+                  className="form-control"
+                  value={moment(toDate).format("YYYY-MM-DDTHH:mm")}
+                  onChange={(item) => {
+                    moment(item.target.value).isAfter(fromDate) &&
+                      setToDate(item.target.value);
+                  }}
+                />
+              </div>
+
+              {/* limit */}
+              <div style={{ width: "80px" }} className="me-5 mb-2">
+                <label htmlFor="limit" className="form-label">
+                  Limit
+                </label>
+                <select
+                  id="limit"
+                  value={limit}
+                  className="form-select"
+                  onChange={(e) => setLimit(e.target.value)}
+                >
+                  <option value="10">10</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              {/* Advance Filter */}
+              <div className="col-sm-3  align-self-end mb-2">
+                <Button
+                  onClick={() => setAdvance(!advance)}
+                  className="w-100 "
+                  variant="secondary"
+                >
+                  Advance Filter
+                </Button>
+              </div>
+            </div>
+            {advance && (
+              <Table bordered responsive>
+                <thead>
+                  <tr>
+                    <th>Metadata</th>
+                    <th>Operator</th>
+                    <th>Comparison Operator </th>
+                    <th>Value</th>
+                    <th className="text-center">
+                      {/* <FaPlus cursor="pointer" onClick={addTableRows}/> */}
+                      {/* <Button>Add</Button> */}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody style={{ backgroundColor: "white" }}>
+                  {queryOptions.map((data, index) => {
+                    return (
+                      <tr key={index}>
+                        {/* Meta */}
+                        <td>
+                          <select
+                            name={data.name}
+                            className="form-select mb-148"
+                            value={data.name}
+                            required
+                            onChange={(e) =>
+                              setQueryParams(e.target.value, index, "name")
+                            }
+                          >
+                            <option value="">Select Meta</option>
+                            {columns.map((col, i) => {
+                              return (
+                                <option
+                                  key={i}
+                                  disabled={duplicate.includes(col.name)}
+                                  className="col-sm-2"
+                                  value={col.name}
+                                >
+                                  {col.name}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </td>
+                        {/* Option */}
+                        <td>
+                          {index !== 0 && (
+                            <select
+                              name={data.option}
+                              className="form-select mb-148"
+                              value={data.option}
+                              required
+                              onChange={(e) =>
+                                setQueryParams(e.target.value, index, "option")
+                              }
+                            >
+                              <option value="AND">AND</option>
+                              <option value="OR">OR</option>
+                            </select>
+                          )}
+                        </td>
+                        {/* Conjuntion */}
+                        <td>
+                          <select
+                            name={data.conjunction}
+                            className="form-select mb-148"
+                            required
+                            value={data.conjunction}
+                            onChange={(e) =>
+                              setQueryParams(
+                                e.target.value,
+                                index,
+                                "conjunction"
+                              )
+                            }
+                          >
+                            <option value="=">Equal</option>
+                            <option value="<">Less Than</option>
+                            <option value=">">Greater Than</option>
+                            <option value=">=">Greater Than Equal To</option>
+                            <option value="<=">Less than Equal To</option>
+                            <option value="!=">Not Equal</option>
+                          </select>
+                        </td>
+                        {/* Input */}
+                        <td>
+                          <input
+                            name={data.inputVal}
+                            type="text"
+                            required
+                            className="form-control mb-148"
+                            value={data.inputVal}
+                            placeholder="value"
+                            onChange={(e) =>
+                              setQueryParams(e.target.value, index, "inputVal")
+                            }
+                          />
+                        </td>
+                        <td className="text-center">
+                          {/* Add ROw */}
+                          <FaPlus
+                            cursor="pointer"
+                            onClick={() => addTableRows(index)}
+                          />
+                          {/* Delete Row */}
+                          {queryOptions.length !== 1 && (
+                            <FaTrashAlt
+                              cursor="pointer"
+                              style={{ marginLeft: "8px" }}
+                              onClick={() => deleteTableRows(index)}
+                            />
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody style={{ backgroundColor: "white" }}>
-                      {queryOptions.map((data, i) => {
-                        return (
-                          <tr key={i}>
-                            <th className="">{data.name}</th>
-                            <td>
-                              <select
-                                className="form-select "
-                                value={data.option}
-                                onChange={(e) =>
-                                  setQueryParams(e.target.value, i, "option")
-                                }
-                              >
-                                <option value="AND">AND</option>
-                                <option value="OR">OR</option>
-                              </select>
-                            </td>
-                            <td>
-                              <select
-                                className="form-select"
-                                value={data.conjunction}
-                                onChange={(e) =>
-                                  setQueryParams(
-                                    e.target.value,
-                                    i,
-                                    "conjunction"
-                                  )
-                                }
-                              >
-                                <option value="=">Equal</option>
-                                <option value="<">Less</option>
-                                <option value=">">Greater</option>
-                                <option value=">=">Greater Than</option>
-                                <option value="<=">Less than</option>
-                                <option value="!=">Not Equal</option>
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="form-control "
-                                value={data.inputVal}
-                                placeholder={`Enter ${data.name}`}
-                                onChange={(e) =>
-                                  setQueryParams(e.target.value, i, "inputVal")
-                                }
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                  <div className="d-flex justify-content-end">
-                    <Button
-                      className="align-self-center col-md-2"
-                      variant="danger"
-                      onClick={geLogWithSearch}
-                    >
-                      Submit
-                    </Button>
-                  </div>
-                </>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            )}
+            {/* Submit Button & Limit */}
+            <div className="d-flex  justify-content-end">
+              <Button
+                className="align-self-end col-md-2"
+                variant="danger"
+                disabled={advance && !withSearch && true}
+                onClick={withSearch && advance ? getLogWithSearch : getLog}
+              >
+                Submit
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Table Log data */}
+        {columns.length !== 0 && (
+          <>
+            <div className="d-flex my-3 justify-content-between align-items-center ">
+              {/*  Showing rows count and elapsed time from api response */}
+              <div>
+                About {showRowsElapsed && showRowsElapsed.rows} rows ({" "}
+                {showRowsElapsed && showRowsElapsed.statistics.elapsed} elapsed
+                ){" "}
+              </div>
+              {logs.length > 0 && (
+                <Button
+                  variant="danger"
+                  className="form-input-group col-sm-2  align-self-end"
+                  disabled={selected ? false : true}
+                  onClick={downloadDataInCsv}
+                >
+                  Download Data
+                </Button>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Limit & Download */}
-        <div className="d-flex my-3 justify-content-between ">
-          <div className="col-sm-3">
-            <label for="limit" class="form-label">
-              Limit
-            </label>
-            <select
-              id="limit"
-              value={limit}
-              className="form-select"
-              onChange={(e) => setLimit(e.target.value)}
-            >
-              <option value="10">10</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-          {logs.length > 0 && (
-            <Button
-              variant="danger"
-              className="form-input-group col-sm-2  align-self-end"
-              disabled={selected ? false : true}
-              onClick={downloadDataInCsv}
-            >
-              Download Data
-            </Button>
-          )}
-        </div>
-        {/* Table Log data */}
-        {columns.length === 0 ? (
-          ""
-        ) : (
-          <>
             <Table
               id="down"
               className="table down table-responsive"
@@ -391,66 +483,74 @@ const Home = () => {
                 </tr>
               </thead>
               {logs.length === 0 ? (
-                ""
+                <tbody>
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      style={{
+                        backgroundColor: "white",
+                        padding: "10px",
+                        width: "100%",
+                        textAlign: "center",
+                      }}
+                    >
+                      <img src={dataNotFound} alt="Not found" />
+                    </td>
+                  </tr>
+                </tbody>
               ) : (
-                <tbody style={{ backgroundColor: "white" }}>
-                  {logs.map((e, i) => {
+                <tbody
+                  className="downTable"
+                  style={{ backgroundColor: "white" }}
+                >
+                  {logs.map((item, index) => {
                     return (
-                      <tr key={i}>
-                        <td>{e.SERIALNO}</td>
-                        <td>{e.LAC}</td>
-                        <td>{e.CELLID}</td>
-                        <td>{e.MSI}</td>
-                        <td>{e.IMSI}</td>
-                        <td>{e.IPV4}</td>
-                        <td>{e.IPV6}</td>
-                        <td>{e.CALLDURATION}</td>
-                        <td>{e.CALLSIDE}</td>
-                        <td>{e.NET}</td>
-                        <td>{e.CALLINGPARTYNUMBER}</td>
-                        <td>{e.CALLINDPARTYNUMBER}</td>
-                        <td>{e.DIALEDNUMBER}</td>
-                        <td>{e.SUBCOSID}</td>
-                        <td>{e.PRODUCTID}</td>
-                        <td>{e.ACCOUNTID}</td>
-                        <td>{e.SUBSCRIBERID}</td>
-                        <td>{e.BRANDID}</td>
-                        <td>{e.CALLREFERENCENUMBER}</td>
-                        <td>{e.DIAMETERSESSIONID}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => handleShow(e.KEYS)}
-                          >
-                            View Key
-                          </button>
-                        </td>
+                      <tr key={index}>
+                        {Object.values(item)
+                          .slice(2)
+                          .map((val) => {
+                            return (
+                              <td>
+                                {isJson(val) === true ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => handleShowModal(val)}
+                                  >
+                                    View Key
+                                  </button>
+                                ) : (
+                                  val
+                                )}
+                              </td>
+                            );
+                          })}
                       </tr>
                     );
                   })}
                 </tbody>
               )}
             </Table>
-            {logs.length === 0 ? <div style={{backgroundColor:"white" ,padding:"10px" ,width:"100%",textAlign:"center"}}> <img src="/images/data-not-found.jpg"/> </div> : ""}
           </>
         )}
 
         {/* Modal */}
-        <Modal show={show} onHide={handleClose}>
+        <Modal show={showModal} onHide={handleCloseModal}>
           <Modal.Header closeButton>
             <Modal.Title>Download key</Modal.Title>
           </Modal.Header>
-          <Modal.Body>{showKey}</Modal.Body>
+          <Modal.Body>
+            <code>{keyData}</code>
+          </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
+            <Button variant="secondary" onClick={handleCloseModal}>
               Close
             </Button>
             <Button
               variant="primary"
               onClick={() =>
                 keyDownload(
-                  JSON.stringify(showKey),
+                  JSON.stringify(keyData),
                   "json-file-name.json",
                   "text/plain"
                 )

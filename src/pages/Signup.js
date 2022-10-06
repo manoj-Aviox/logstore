@@ -1,5 +1,6 @@
 import React from "react";
 import { useKeycloak } from "@react-keycloak/web";
+import logo from "../Images/logo.png";
 
 const Signup = () => {
   const { keycloak } = useKeycloak();
@@ -10,7 +11,7 @@ const Signup = () => {
     <div>
       <div className="sing-log-wrap">
         <div className="p-3">
-          <img className="" src="/images/logo.png" />
+          <img className="" src={logo} alt="logo" />
         </div>
         <div className="signup-area">
           <div className="container">
